@@ -1,3 +1,5 @@
+# https://discordpy.readthedocs.io/en/stable/index.html
+
 import os
 
 import discord
