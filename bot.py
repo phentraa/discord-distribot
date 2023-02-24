@@ -1,4 +1,5 @@
 import os
+import re
 import discord
 from discord.ext import commands
 from dotenv import load_dotenv
@@ -31,6 +32,10 @@ def get_member(name: str):
     return discord.utils.get(get_guild().members, name=name)
 
 
+def remove_mentions_from(message_content: str) -> str:
+    return re.sub('<@[0-9]*>', '', message_content)
+
+
 # EVENT HANDLERS -------------------------------------------------------------------------------------------------------
 
 
@@ -57,13 +62,19 @@ async def on_message(message: discord.Message):
     # print(f'Message on: #{message.channel.name}')
     # print(f'Author: {message.author}')
     # print(f'Content: {message.content}')
+    # member_to = get_member(name='Kovács Péter')
 
-    await message.add_reaction(('\N{PARTY POPPER}'))
+    if bot.user.mentioned_in(message):
+        await message.add_reaction(('\N{PARTY POPPER}'))
 
-    member_to = get_member(name='Kovács Péter')
+        clean_content = remove_mentions_from(message.content)
 
-    await member_to.create_dm()
-    await member_to.dm_channel.send(message.content)
+        for user in message.mentions:
+            if user == bot.user:
+                continue
+            # print(f'Message to: {user} --> {clean_content}')
+            await user.create_dm()
+            await user.dm_channel.send(clean_content)
 
 
 @bot.event
