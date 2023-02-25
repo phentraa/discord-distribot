@@ -45,8 +45,6 @@ async def on_ready():
     guild = get_guild()
 
     print(f'Connected to the following guild: {guild.name} - {guild.id}')
-    # print('Members:')
-    # print('\n'.join([member.name for member in guild.members]))
 
 
 @bot.event
@@ -59,22 +57,19 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    # print(f'Message on: #{message.channel.name}')
-    # print(f'Author: {message.author}')
-    # print(f'Content: {message.content}')
-    # member_to = get_member(name='Kovács Péter')
-
     if bot.user.mentioned_in(message):
-        await message.add_reaction(('\N{PARTY POPPER}'))
+        await message.add_reaction('\N{PARTY POPPER}')
 
         clean_content = remove_mentions_from(message.content)
+
+        header = f'From {message.author.name} on #{message.channel}\n{message.jump_url}\n\n'
 
         for user in message.mentions:
             if user == bot.user:
                 continue
-            # print(f'Message to: {user} --> {clean_content}')
+
             await user.create_dm()
-            await user.dm_channel.send(clean_content)
+            await user.dm_channel.send(header + clean_content)
 
 
 @bot.event
