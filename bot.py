@@ -28,8 +28,12 @@ def get_guild():
     return discord.utils.get(bot.guilds, name=GUILD)
 
 
-def get_member(name: str):
+def get_member_by(name: str):
     return discord.utils.get(get_guild().members, name=name)
+
+
+def get_members_of(role: discord.Role) -> set:
+    return set(filter(lambda member: role in member.roles, get_guild().members))
 
 
 def remove_mentions_from(message_content: str) -> str:
@@ -64,12 +68,28 @@ async def on_message(message: discord.Message):
 
         header = f'From {message.author.name} on #{message.channel}\n{message.jump_url}\n\n'
 
-        for user in message.mentions:
-            if user == bot.user:
-                continue
+        # Kiküldés duplikáció nélkül szerepkör és konkrét user említése esetén is
+        # Algoritmus:
+        # 1. Kigyűjteni az összes említett szerepkörhöz tartozó felhasználókat set-be : nincs ismétlés!
+        # 2. Bepakolni a külön megemlített felhasználókat a set-be : továbbra sincs ismétlés
+        # 3. Az így létrehozott címzett listának szétosztani az üzenetet.
 
-            await user.create_dm()
-            await user.dm_channel.send(header + clean_content)
+        recipients = set()
+
+        for role in message.role_mentions:
+            recipients.update(get_members_of(role))
+
+        for user in message.mentions:
+            if user != bot.user:
+                recipients.add(user)
+
+        # print('Recipients:')
+        # for r in recipients:
+        #     print(r)
+
+        for recipient in recipients:
+            await recipient.create_dm()
+            await recipient.dm_channel.send(header + clean_content)
 
 
 @bot.event
