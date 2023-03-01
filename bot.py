@@ -36,8 +36,12 @@ def get_members_of(role: discord.Role) -> set:
     return set(filter(lambda member: role in member.roles, get_guild().members))
 
 
+def get_role_by(name: str) -> discord.Role:
+    return discord.utils.get(get_guild().roles, name=name)
+
+
 def remove_mentions_from(message_content: str) -> str:
-    return re.sub('<@[0-9]*>', '', message_content)
+    return re.sub('<@&*[0-9]*>', '', message_content)
 
 
 # EVENT HANDLERS -------------------------------------------------------------------------------------------------------
@@ -62,17 +66,10 @@ async def on_message(message: discord.Message):
         return
 
     if bot.user.mentioned_in(message):
-        await message.add_reaction('\N{PARTY POPPER}')
+        await message.add_reaction('\N{ROBOT FACE}')
 
         clean_content = remove_mentions_from(message.content)
-
         header = f'From {message.author.name} on #{message.channel}\n{message.jump_url}\n\n'
-
-        # Kiküldés duplikáció nélkül szerepkör és konkrét user említése esetén is
-        # Algoritmus:
-        # 1. Kigyűjteni az összes említett szerepkörhöz tartozó felhasználókat set-be : nincs ismétlés!
-        # 2. Bepakolni a külön megemlített felhasználókat a set-be : továbbra sincs ismétlés
-        # 3. Az így létrehozott címzett listának szétosztani az üzenetet.
 
         recipients = set()
 
@@ -82,10 +79,6 @@ async def on_message(message: discord.Message):
         for user in message.mentions:
             if user != bot.user:
                 recipients.add(user)
-
-        # print('Recipients:')
-        # for r in recipients:
-        #     print(r)
 
         for recipient in recipients:
             await recipient.create_dm()
@@ -100,6 +93,7 @@ async def on_error(event, *args, **kwargs):
 
 @bot.event
 async def on_command_error(ctx, error):
+    print(error)
     await ctx.send('Something aint right with this command...')
 
 
@@ -107,14 +101,33 @@ async def on_command_error(ctx, error):
 
 @bot.command(name='users', help='Shows users grouped by roles. Extended: users admin --> only users with admin role')
 async def show_users_by_group(ctx, role: str = commands.parameter(default='all', description='Add a specific role')):
-    print(f'Value of the role parameter: {role}')
-    await ctx.send('I will show the users grouped by roles.')
+    message = f'A szerver felhasználói szerepek szerint (role={role}):\n'
+    groups = dict()
+    if role == 'all':
+        for member in get_guild().members:
+            for role in member.roles:
+                if role.name == '@everyone':
+                    continue
+                if role.name not in groups.keys():
+                    groups[role.name] = []
+                groups[role.name].append(member.name)
+
+        for role, users in groups.items():
+            message += f'{role} --> {" ".join(users)}\n'
+    else:
+        role_members = get_members_of(get_role_by(role))
+        member_names = [member.name for member in role_members]
+        message += ' '.join(member_names)
+
+    await ctx.send(message)
 
 
 @bot.command(name='roles', help='Shows the available roles on the guild.')
 async def show_roles(ctx):
-    available_roles = 'none'
-    await ctx.send(f'Available roles:\n {available_roles}')
+    message = 'A szerveren elérhető szerepek:\n'
+    for role in get_guild().roles:
+        message += f'- {role.name.replace("@","")}\n'
+    await ctx.send(message)
 
 
 if __name__ == '__main__':
